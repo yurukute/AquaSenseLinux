@@ -1,10 +1,12 @@
 #include "../include/r4ava07.hpp"
 #include "../include/vernier.hpp"
-#include <cstdlib>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <algorithm>
 #include <functional>
+#include <map>
+#include <ostream>
 #include <thread>
 #include <vector>
 
@@ -13,93 +15,122 @@
 #define ODO_CH 2
 #define FPH_CH 3
 
-using namespace std::chrono_literals;
+#ifndef PORT
+#define PORT "/dev/ttymxc1"
+#endif
 
-const float Rl = 5930.434783; // ADC resistance
-const int sample_rate = 10;   // 10 samples per read
-const int read_num    = 4;    // Number of voltage inputs
+const float Rl = 5930.434783;   // ADC resistance
+const int read_num = 4;         // Number of voltage inputs
 
-std::vector<float> voltage_avg;
+std::vector<float> voltage_sum; // Store sum of voltage;
+float tmp = NAN, odo = NAN, fph = NAN;
 R4AVA07 ADC;
 
-// Sensor objects
-SSTempSensor TMP;
-ODOSensor    ODO;
-FPHSensor    FPH;
-
-float readTemp() {
-    float vin  = voltage_avg[VIN_CH];
-    float vout = voltage_avg[TMP_CH];
-    if (vout == 0.0) {
-        return NAN;
+void readTemp() {
+    SSTempSensor TMP;
+    std::chrono::seconds response_time(10);
+    while (true) {
+        std::this_thread::sleep_for(response_time);
+        // Calculate average
+        float vin  = voltage_sum[VIN_CH] / response_time.count();
+        float vout = voltage_sum[TMP_CH] / response_time.count();
+        // Reset readings
+        voltage_sum[VIN_CH] = 0;
+        voltage_sum[TMP_CH] = 0;
+        // Schematic:
+        //   Rt: Thermistor
+        //   R1: Divider resistor (Vernier's BTA protoboard)
+        //   Rl: Load resistor (R4AVA07 ADC)
+        //
+        // [GND] --- [Rt] ----- | ----- [R1] -----[VCC (5v)]
+        //       |              |
+        //       |-- [Rl] ----- |
+        //                      |
+        //               [Analog input]
+        // Parallel resistance:
+        // Rp   = Rt*Rl/(Rt+Rl)
+        // Vout = Vin*Rp/(R1+Rp)
+        if (vout > 0.0) {
+            float R1 = TMP.getDividerResistance();
+            float Rp = 1/(vin/(R1*vout) - 1/Rl - 1/R1);
+            tmp = TMP.calculateTemp(Rp);
+        }
+        else tmp = NAN;
     }
-    // Schematic:
-    //   Rt: Thermistor
-    //   R1: Divider resistor (Vernier's BTA protoboard)
-    //   Rl: Load resistor (R4AVA07 ADC)
-    //
-    // [GND] --- [Rt] ----- | ----- [R1] -----[VCC (5v)]
-    //       |              |
-    //       |-- [Rl] ----- |
-    //                      |
-    //               [Analog input]
-    // Parallel resistance:
-    // Rp   = Rt*Rl/(Rt+Rl)
-    // Vout = Vin*Rp/(R1+Rp)
-    float R1 = TMP.getDividerResistance();
-    float Rp = 1/(vin/(R1*vout) - 1/Rl - 1/R1);
-    return TMP.calculateTemp(Rp);
 }
 
-float readODO() {
-    float vout = voltage_avg[ODO_CH];
-    if (vout == 0.0) {
-        return NAN;
+void readODO() {
+    ODOSensor ODO;
+    std::chrono::seconds response_time(40);
+    while (true) {
+        std::this_thread::sleep_for(response_time);
+        // Calculate average
+        float vout = voltage_sum[ODO_CH] / response_time.count();
+        // Reset reading
+        voltage_sum[ODO_CH] = 0;
+        if (vout > 0.0) {
+            odo = ODO.readSensor(vout);
+        }
+        else vout = NAN;
     }
-    return ODO.readSensor(vout);
 }
 
-float readFPH() {
-    float vout = voltage_avg[FPH_CH];
-    if (vout == 0.0) {
-        return NAN;
+void readFPH() {
+    FPHSensor FPH;
+    std::chrono::seconds response_time(1);
+    while (true) {
+        std::this_thread::sleep_for(response_time);
+        float vout = voltage_sum[FPH_CH] / response_time.count();
+        if (vout > 0.0) {
+            fph = FPH.readSensor(vout);
+        }
+        else fph = NAN;
     }
-    return FPH.readSensor(vout);
 }
 
 void readVoltage() {
-    int sample_rate = 1;
-    std::fill(voltage_avg.begin(), voltage_avg.end(), 0);
-    for (auto i = 0; i < sample_rate; i++) {
-        std::transform(voltage_avg.begin(), voltage_avg.end(),
-                       ADC.readVoltage(1, read_num).begin(),
-                       voltage_avg.begin(), std::plus<float>());
-    }
-    // Calculate average
-    for (auto &v : voltage_avg) {
-        v /= sample_rate;
+    std::vector<float> voltage_read;
+    while (true) {
+        voltage_read = ADC.readVoltage(1, read_num);
+        std::transform(voltage_sum.begin(), voltage_sum.end(),
+                       voltage_read.begin(),
+                       voltage_sum.begin(), std::plus<float>());
+
+        std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n";
+        for (auto v : voltage_read) {
+            std::cout << "\t" << std::setprecision(2) << v;
+        }
+        std::cout << "\n";
     }
 }
 
 int main() {
-    std::cout << "Connecting R4AVA07...";
-    while (ADC.connect("/dev/ttymxc1") < 0) {
-        std::cout << ".";
+    using namespace std::chrono_literals;
+
+    std::cout << "Connecting R4AVA07..." << std::flush;
+    while (ADC.connect(PORT) < 0) {
+        std::cout << "." << std::flush;
         std::this_thread::sleep_for(1s);
     }
-    std::cout << "\n";
+    std::cout << std::endl;
     
-    while (true) {
-        readVoltage();
+    std::thread adc_thread(readVoltage);
+    adc_thread.join();
 
-        std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n";
-        for (auto v : voltage_avg) {
-            std::cout << "\t" << std::setprecision(2) << v;
-        }
-        std::cout << "\n";
-        
-        std::cout << "Temperature: " << readTemp()
-                  << "Dissolved oxygen: " << readODO()
-                  << "pH: " << readFPH();
+    std::thread temp_reader(readTemp);
+    temp_reader.detach();
+
+    std::thread odo_reader(readODO);
+    temp_reader.detach();
+
+    std::thread fph_reader(readFPH);
+    fph_reader.detach();
+
+    while (true) {
+        std::cout << "Temperature: " << tmp
+                  << "\nDissolved oxygen: " << odo
+                  << "\npH: " << fph
+                  << std::endl;
+        std::this_thread::sleep_for(1s);
     }
 }
