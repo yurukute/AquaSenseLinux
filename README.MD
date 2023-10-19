@@ -1,5 +1,5 @@
-# AquaSense752
-*Note This is a version developed for Artila Matrix-752. For Matrix-310 version, please visit the [AquaSense](https://github.com/yurukute/AquaSense/) repository.*
+# AquaSenseLinux
+*Note This is a version developed for Artila Matrix752 and/or Matrix518 which are Linux ARM based. For Matrix-310 (Arduino-based) version, please visit the [AquaSense](https://github.com/yurukute/AquaSense/) repository.*
 
 An observing system using Vernier sensors to observe the quality of water in various locations, such as rivers, lakes, and reservoirs. The system will provide real-time data collection, analysis, and reporting capabilities to support environmental monitoring and decision-making processes.
 ## Feature

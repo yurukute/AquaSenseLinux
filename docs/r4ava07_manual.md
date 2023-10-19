@@ -1,7 +1,7 @@
 # R4AVA07 manual
-![](../static/r4ava07.jpg)
+<img src="../static/r4ava07.jpg" width="300">
 
-## Features
+## Specifications
 - Operating voltage: DC 8-25V.
 - Operating Current: 10-15MA.
 - Measurement range: 0-5V (CH1-4) or 0-10V (CH5-7) ± 1%.

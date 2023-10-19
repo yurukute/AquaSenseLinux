@@ -1,4 +1,4 @@
-CXX = arm-poky-linux-gnueabi-g++
+CXX   = arm-poky-linux-gnueabi-g++
 STRIP = arm-poky-linux-gnueabi-strip
 
 BUILD ?=
@@ -12,7 +12,7 @@ EXEC = $(BUILD_DIR)/exec
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
-CXXFLAGS.      = -I$(INCL_DIR) -Wall
+CXXFLAGS.      = -I$(INCL_DIR) -Wall -O2 -march=armv7-a -mfloat-abi=hard -mfpu=neon-vfpv4
 CXXFLAGS.debug =  $(CXXFLAGS.) -g -DDEBUG
 LDLIBS = -lpthread # Load libraries
 
