@@ -3,6 +3,10 @@
 
 #define RESOLUTION 4096
 
+Vernier::Vernier() {
+    Vin = 5.0;
+}
+
 Vernier::~Vernier() {};
 
 float Vernier::readSensor(float voltage) {
@@ -25,6 +29,11 @@ SSTempSensor::SSTempSensor() {
     intercept = 1;
     responeTime = 10;
     strcpy(sensorUnit, "Deg C");
+    K0 = 0.00102119;
+    K1 = 0.000222468;
+    K2 = 0.000000133342;
+    therm = 20000;
+    divider = 15000;
 }
 
 void SSTempSensor::switchUnit() {

@@ -39,7 +39,6 @@ bool isValid(uint8_t ch) {
     return (ch >= 1 && ch <= CH_MAX);
 }
 
-
 int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     uint8_t msg[8] = {0x00};
     uint8_t respone[BUFFER_SIZE];
@@ -58,7 +57,7 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
 #ifdef DEBUG
     char buffer[BUFFER_SIZE * 3];
     char *ptr = buffer;
-    for (auto i = 0; i < sizeof(msg); i++){
+    for (int i = 0; i < sizeof(msg); i++){
         sprintf(ptr, "%02X ", msg[i]);
         ptr += 3;
     }
@@ -66,7 +65,7 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     DEBUG_PRINT("Send message:\t" << buffer);
     if (read_size > 0) {
         ptr = buffer;
-        for (auto i = 0; i < read_size; i++){
+        for (int i = 0; i < read_size; i++){
             sprintf(ptr, "%02X ", respone[i]);
             ptr += 3;
         }
@@ -79,9 +78,9 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
         DEBUG_PRINT("Send failed.");
     }
     else if (func == MODBUS_READ) {
-        for (auto i = 0; i < respone[0]/2; i++) {
+        for (int i = 0; i < respone[0]/2; i++) {
             // Skip the first byte, read 2 bytes each.
-            auto pos = 2*i+1;
+            int pos = 2*i+1;
             read_data[i] = (uint16_t) respone[pos] << 8 | respone[pos+1];
         }
     }
@@ -117,44 +116,42 @@ int R4AVA07::connect(const char* port) {
 }
 
 std::vector<float>  R4AVA07::readVoltage(uint32_t ch, uint8_t number) {
+    std::vector<float> voltage;
     if (isValid(ch) == false) {
         DEBUG_PRINT("Invalid channel: " << ch);
-        return {-1};
     }
     if (isValid(ch + number -1) == false) {
         DEBUG_PRINT("Invalid read number: " << number);
-        return {-1};
     }
     // Channel 1-7 indicated at 0x0000-0x0006.
     if (send(ID, MODBUS_READ, (ch-1) << 16 | number) < 1) {
         DEBUG_PRINT("Cannot read voltage values.");
-        return {-1};
     }
-    std::vector<float> voltage;
-    for (auto i = 0; i < number; i++) {
-        voltage.push_back((float) read_data[i] / 100.0);
+    else {
+        for (int i = 0; i < number; i++) {
+            voltage.push_back((float) read_data[i] / 100.0);
+        }
     }
     return voltage;
 }
 
 std::vector<float> R4AVA07::getVoltageRatio(uint32_t ch,
                                             uint8_t number) {
+    std::vector<float> ratio;
     if (isValid(ch) == false) {
         DEBUG_PRINT("Invalid channel: " << ch);
-        return {-1};
     }
-    if (isValid(ch + number -1) == false) {
+    else if (isValid(ch + number -1) == false) {
         DEBUG_PRINT("Invalid read number: " << number);
-        return {-1};
     }
     // Channel 1-7 indicated at 0x0007-0x000D.
-    if (send(ID, MODBUS_READ, (ch+6) << 16 | number) < 1) {
+    else if (send(ID, MODBUS_READ, (ch+6) << 16 | number) < 1) {
         DEBUG_PRINT("Cannot read voltage ratios.");
-        return {-1};
     }
-    std::vector<float> ratio;
-    for (auto i = 0; i < number; i++) {
-        ratio.push_back((float) read_data[i] / 1000.0);
+    else {
+        for (int i = 0; i < number; i++) {
+            ratio.push_back((float) read_data[i] / 1000.0);
+        }
     }
     return ratio;
 }

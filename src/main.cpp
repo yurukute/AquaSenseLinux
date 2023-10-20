@@ -5,7 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
-#include <thread>
+#include <unistd.h>
 #include <vector>
 
 #define VIN_CH 0
@@ -13,7 +13,9 @@
 #define ODO_CH 2
 #define FPH_CH 3
 
-using namespace std::chrono_literals;
+#ifndef PORT
+#define PORT "/dev/ttymxcx1"
+#endif
 
 const float Rl = 5930.434783; // ADC resistance
 const int sample_rate = 10;   // 10 samples per read
@@ -68,38 +70,39 @@ float readFPH() {
 }
 
 void readVoltage() {
-    int sample_rate = 1;
     std::fill(voltage_avg.begin(), voltage_avg.end(), 0);
-    for (auto i = 0; i < sample_rate; i++) {
+    for (int i = 0; i < sample_rate; i++) {
         std::transform(voltage_avg.begin(), voltage_avg.end(),
                        ADC.readVoltage(1, read_num).begin(),
                        voltage_avg.begin(), std::plus<float>());
     }
     // Calculate average
-    for (auto &v : voltage_avg) {
-        v /= sample_rate;
+    for (int i = 0; i < (int) sizeof(voltage_avg); i++) {
+        voltage_avg[i] /= sample_rate;
     }
 }
 
 int main() {
-    std::cout << "Connecting R4AVA07...";
-    while (ADC.connect("/dev/ttymxc1") < 0) {
-        std::cout << ".";
-        std::this_thread::sleep_for(1s);
+    std::cout << "Connecting R4AVA07..." << std::flush;
+    while (ADC.connect(PORT) < 0) {
+        std::cout << "." << std::flush;
+        sleep(1);
     }
-    std::cout << "\n";
+    std::cout << std::endl;
     
     while (true) {
         readVoltage();
 
         std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n";
-        for (auto v : voltage_avg) {
-            std::cout << "\t" << std::setprecision(2) << v;
+        for (int i = 0; i < (int) sizeof(voltage_avg); i++) {
+            std::cout << "\t" << std::setprecision(2)
+                      << voltage_avg[i];
         }
-        std::cout << "\n";
+        std::cout << std::endl;
         
         std::cout << "Temperature: " << readTemp()
                   << "Dissolved oxygen: " << readODO()
-                  << "pH: " << readFPH();
+                  << "pH: " << readFPH()
+                  << std::endl;
     }
 }

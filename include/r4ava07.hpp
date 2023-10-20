@@ -1,7 +1,7 @@
 #ifndef R4AVA07_H
 #define R4AVA07_H
 #include <vector>
-#include <cstdint>
+#include <stdint.h>
 #endif
 #define R4AVA07LIB_VERSION "1.0.0"
 
@@ -12,7 +12,7 @@ class R4AVA07 {
     short ID;
     short baud;
     int fd;
-    uint8_t read_data[CH_MAX] = {0x00};
+    uint8_t read_data[CH_MAX];
 
   protected:
     // Send command to R4AVA07 and read returned message in buffer

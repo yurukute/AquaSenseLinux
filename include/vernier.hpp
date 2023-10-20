@@ -10,13 +10,14 @@
 
 class Vernier {
   protected:
-    float Vin = 5.0;
+    float Vin;
     float slope;
     float intercept;
     float responeTime;
     char sensorUnit[7];
 
   public:
+    Vernier();
     virtual ~Vernier() = 0;
     // Return sensor's current unit of measurement.
     char* getSensorUnit()      { return sensorUnit; }
@@ -35,18 +36,18 @@ class Vernier {
 class SSTempSensor : public Vernier {
   private:
     // Steinhart-Hart coefficients:
-    const double K0 = 0.00102119;
-    const double K1 = 0.000222468;
-    const double K2 = 0.000000133342;
+    double K0;
+    double K1;
+    double K2;
     // Sensor thermistor:
-    const int therm = 20000;
+    int therm;
     // Schematic:
     // [GND] -- [Thermistor] ----- | ----- [Resistor] --[Vcc (5v)]
     //                             |
     //                       Analog input
     //
     // Vernier's BTA protoboard builtin resistor:
-    float divider = 15000;
+    float divider;
 
   public:
     SSTempSensor();
