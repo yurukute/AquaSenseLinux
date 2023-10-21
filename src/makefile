@@ -14,7 +14,8 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 CXXFLAGS.      = -I$(INCL_DIR) -Wall -O2 -march=armv5te -std=c++0x
 CXXFLAGS.debug =  $(CXXFLAGS.) -g -DDEBUG
-LDLIBS = # Load libraries
+LDFLAGS = -static-libgcc
+LDLIBS  = # Load libraries
 
 .PHONY: all run clean
 
