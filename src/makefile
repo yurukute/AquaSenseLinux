@@ -2,11 +2,12 @@ CXX   = arm-linux-gnueabi-g++
 STRIP = arm-linux-gnueabi-strip
 
 BUILD ?=
-BUILD_DIR = ../build/${BUILD}
-OBJ_DIR   = ../bin/${BUILD}
-INCL_DIR  = ../include
-SRC_DIR   = ./
-LIB_DIR   = ../lib
+PRJ_DIR   = ..
+BUILD_DIR = $(PRJ_DIR)/build/${BUILD}
+OBJ_DIR   = $(PRJ_DIR)/bin/${BUILD}
+INCL_DIR  = $(PRJ_DIR)/include
+SRC_DIR   = $(PRJ_DIR)/src
+LIB_DIR   = $(PRJ_DIR)/lib
 
 EXEC = $(BUILD_DIR)/exec
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
@@ -23,6 +24,7 @@ all: $(EXEC)
 
 $(EXEC): $(OBJS) | $(BUILD_DIR)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(STRIP) $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS.$(BUILD)) -c -o $@ $<

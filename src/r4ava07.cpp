@@ -79,8 +79,8 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     }
     else if (func == MODBUS_READ) {
         for (int i = 0; i < respone[0]/2; i++) {
-            // Skip the first byte, read 2 bytes each.
-            int pos = 2*i+1;
+            // Read from the 3rd byte, read 2 bytes each.
+            int pos = 2*i+3;
             read_data[i] = (uint16_t) respone[pos] << 8 | respone[pos+1];
         }
     }

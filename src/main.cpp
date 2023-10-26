@@ -14,14 +14,14 @@
 #define FPH_CH 3
 
 #ifndef PORT
-#define PORT "/dev/ttymxcx1"
+#define PORT "/dev/ttyS1"
 #endif
 
 const float Rl = 5930.434783; // ADC resistance
 const int sample_rate = 10;   // 10 samples per read
 const int read_num    = 4;    // Number of voltage inputs
 
-std::vector<float> voltage_avg;
+std::vector<float> voltage_avg(CH_MAX);
 R4AVA07 ADC;
 
 // Sensor objects
