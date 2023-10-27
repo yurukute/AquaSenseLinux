@@ -50,7 +50,7 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     *(u_int16_t *)(&msg[6]) = calculateCRC(&msg[0], 6);
 
     write(fd, msg, sizeof(msg));
-    sleep(1);
+    usleep(100);
     
     read_size = read(fd, respone, BUFFER_SIZE);
 
