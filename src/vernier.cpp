@@ -23,7 +23,7 @@ void Vernier::calibrate(float new_slope, float new_intercept) {
 SSTempSensor::SSTempSensor() {
     slope = 0;
     intercept = 1;
-    responeTime = 10;
+    responseTime = 10;
     strcpy(sensorUnit, "Deg C");
 }
 
@@ -62,7 +62,7 @@ float SSTempSensor::readSensor(int rawADC) {
 ODOSensor::ODOSensor() {
     slope = 4.444;
     intercept = -0.4444;
-    responeTime = 40;
+    responseTime = 40;
     strcpy(sensorUnit, "mg/L");
 }
 
@@ -84,7 +84,7 @@ void ODOSensor::switchUnit(){
 FPHSensor::FPHSensor() {
     slope = -7.78;
     intercept = 16.34;
-    responeTime = 1;
+    responseTime = 1;
     sensorUnit[0] = '\0'; // pH don't have unit
 }
 

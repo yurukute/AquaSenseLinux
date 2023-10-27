@@ -22,6 +22,7 @@ all: $(EXEC)
 
 $(EXEC): $(OBJS) | $(BUILD_DIR)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(STRIP) $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS.$(BUILD)) -c -o $@ $<

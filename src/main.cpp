@@ -28,7 +28,7 @@ R4AVA07 ADC;
 
 void readTemp() {
     SSTempSensor TMP;
-    std::chrono::seconds response_time(10);
+    std::chrono::seconds response_time((int) TMP.getResponseTime());
     while (true) {
         std::this_thread::sleep_for(response_time);
         // Calculate average
@@ -61,7 +61,7 @@ void readTemp() {
 
 void readODO() {
     ODOSensor ODO;
-    std::chrono::seconds response_time(40);
+    std::chrono::seconds response_time((int) ODO.getResponseTime());
     while (true) {
         std::this_thread::sleep_for(response_time);
         // Calculate average
@@ -77,7 +77,7 @@ void readODO() {
 
 void readFPH() {
     FPHSensor FPH;
-    std::chrono::seconds response_time(1);
+    std::chrono::seconds response_time((int) FPH.getResponseTime());
     while (true) {
         std::this_thread::sleep_for(response_time);
         float vout = voltage_sum[FPH_CH] / response_time.count();

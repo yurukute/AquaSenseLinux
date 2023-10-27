@@ -13,7 +13,7 @@ class Vernier {
     float Vin = 5.0;
     float slope;
     float intercept;
-    float responeTime;
+    float responseTime;
     char sensorUnit[7];
 
   public:
@@ -21,7 +21,7 @@ class Vernier {
     // Return sensor's current unit of measurement.
     char* getSensorUnit()      { return sensorUnit; }
     // Return sensor's respone time in seconds.
-    float getResponeTime()     { return responeTime; }
+    float getResponseTime()     { return responseTime; }
     // Calculate the sensor value from measured voltage.
     float readSensor(float voltage);
     // Calculate the sensor value from ADC count.
