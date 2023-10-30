@@ -53,7 +53,7 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     *(uint16_t *)(&request[6]) = calculateCRC(&request[0], 6);
 
     write(fd, request, sizeof(request));
-    std::this_thread::sleep_for(500ms);
+    std::this_thread::sleep_for(1s);
     
     read_size = read(fd, response, sizeof(response));
 

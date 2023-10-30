@@ -1,12 +1,10 @@
 #include "../include/r4ava07.hpp"
 #include "../include/vernier.hpp"
+#include <algorithm>
 #include <chrono>
+#include <functional>
 #include <iomanip>
 #include <iostream>
-#include <algorithm>
-#include <functional>
-#include <map>
-#include <ostream>
 #include <thread>
 #include <vector>
 
@@ -21,8 +19,9 @@
 
 const float Rl = 5930.434783;   // ADC resistance
 const int read_num = 4;         // Number of voltage inputs
+const int sample_rate = 10;     // 10 samples per read
 
-std::vector<float> voltage_sum; // Store sum of voltage;
+std::vector<float> voltage_sum(CH_MAX); // Store sum of voltage;
 float tmp = NAN, odo = NAN, fph = NAN;
 R4AVA07 ADC;
 
@@ -90,18 +89,17 @@ void readFPH() {
 
 void readVoltage() {
     std::vector<float> voltage_read;
-    while (true) {
-        voltage_read = ADC.readVoltage(1, read_num);
-        std::transform(voltage_sum.begin(), voltage_sum.end(),
-                       voltage_read.begin(),
-                       voltage_sum.begin(), std::plus<float>());
+    voltage_read = ADC.readVoltage(1, read_num);
+    std::transform(voltage_sum.begin(), voltage_sum.end(),
+                   voltage_read.begin(),
+                   voltage_sum.begin(), std::plus<float>());
 
-        std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n";
-        for (auto v : voltage_read) {
-            std::cout << "\t" << std::setprecision(2) << v;
-        }
-        std::cout << "\n";
+    std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n"
+              << std::setprecision(2);
+    for (auto v : voltage_read) {
+        std::cout << "\t" << v;
     }
+    std::cout << "\n";
 }
 
 int main() {
@@ -111,22 +109,26 @@ int main() {
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
         std::this_thread::sleep_for(1s);
+        break;
     }
     std::cout << std::endl;
-    
-    std::thread adc_thread(readVoltage);
-    adc_thread.join();
 
     std::thread temp_reader(readTemp);
     temp_reader.detach();
 
     std::thread odo_reader(readODO);
-    temp_reader.detach();
+    odo_reader.detach();
 
     std::thread fph_reader(readFPH);
     fph_reader.detach();
 
     while (true) {
+        std::chrono::microseconds delay_time(1000/sample_rate);
+        for (int i = 0; i < sample_rate; i++) {
+            std::thread voltage_reader(readVoltage);
+            voltage_reader.detach();
+            std::this_thread::sleep_for(delay_time);
+        }
         std::cout << "Temperature: " << tmp
                   << "\nDissolved oxygen: " << odo
                   << "\npH: " << fph
