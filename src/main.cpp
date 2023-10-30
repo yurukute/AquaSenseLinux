@@ -23,7 +23,7 @@ const int read_num    = 4;    // Number of voltage inputs
 
 std::vector<float> voltage_sum(CH_MAX);
 R4AVA07 ADC;
-float tmp, odo, fph;
+float tmp = NAN, odo = NAN, fph = NAN;
 
 void *readTemp(void *arg) {
     SSTempSensor TMP;
@@ -79,8 +79,8 @@ void *readFPH(void *arg) {
 
 void *readVoltage(void *arg) {
     std::vector<float> voltage_read;
-    while (true) {
-        voltage_read = ADC.readVoltage(1, read_num);
+    voltage_read = ADC.readVoltage(1, read_num);
+    if (!voltage_read.empty()){
         std::transform(voltage_sum.begin(),voltage_sum.end(),
                        voltage_read.begin(),
                        voltage_sum.begin(), std::plus<float>());
@@ -92,6 +92,7 @@ void *readVoltage(void *arg) {
         }
         std::cout << std::endl;
     }
+    pthread_exit(NULL);
 }
 
 int main() {
@@ -102,10 +103,7 @@ int main() {
     }
     std::cout << std::endl;
 
-    pthread_t volt_reader, tmp_reader, odo_reader, fph_reader;
-    pthread_create(&volt_reader, NULL, readVoltage, NULL);
-    pthread_detach(volt_reader);
-    
+    pthread_t tmp_reader, odo_reader, fph_reader;
     pthread_create(&tmp_reader, NULL, readTemp, NULL);
     pthread_detach(tmp_reader);
 
@@ -116,10 +114,16 @@ int main() {
     pthread_detach(fph_reader);
 
     while (true) {
+        for (int i = 0; i < sample_rate; i++) {
+            pthread_t volt_reader;
+            pthread_create(&volt_reader, NULL, readVoltage, NULL);
+            pthread_detach(volt_reader);
+            usleep(1000 / sample_rate);
+        }
+        sleep(1);
         std::cout << "Temperature: " << tmp
                   << "\nDissolved oxygen: " << odo
                   << "\npH: " << fph
                   << std::endl;
-        sleep(1);
     }
 }
