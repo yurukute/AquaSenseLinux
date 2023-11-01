@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <thread>
 #include <unistd.h>
 
 #define MODBUS_READ  0x03
@@ -29,8 +28,6 @@
 #define DEBUG_PRINT(MSG)
 #endif
 
-using namespace std::chrono_literals;
-
 // CRC calculation
 unsigned short calculateCRC(unsigned char *ptr, int len) {
     unsigned short crc = 0xFFFF;
@@ -53,7 +50,7 @@ int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     *(uint16_t *)(&request[6]) = calculateCRC(&request[0], 6);
 
     write(fd, request, sizeof(request));
-    std::this_thread::sleep_for(1s);
+    sleep(1);
     
     read_size = read(fd, response, sizeof(response));
 

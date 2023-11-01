@@ -109,7 +109,6 @@ int main() {
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
         std::this_thread::sleep_for(1s);
-        break;
     }
     std::cout << std::endl;
 
@@ -123,16 +122,16 @@ int main() {
     fph_reader.detach();
 
     while (true) {
-        std::chrono::microseconds delay_time(1000/sample_rate);
+        std::chrono::milliseconds delay_time(1000/sample_rate);
         for (int i = 0; i < sample_rate; i++) {
             std::thread voltage_reader(readVoltage);
             voltage_reader.detach();
             std::this_thread::sleep_for(delay_time);
         }
+        std::this_thread::sleep_for(2s);
         std::cout << "Temperature: " << tmp
                   << "\nDissolved oxygen: " << odo
                   << "\npH: " << fph
                   << std::endl;
-        std::this_thread::sleep_for(1s);
     }
 }
