@@ -13,6 +13,7 @@
 // Plus 1 byte data size and 2 CRC bytes.
 #define BUFFER_SIZE 17
 #define ID_MAX 247
+#define CH_MAX 7
 
 #ifdef DEBUG
 #include <iostream>
@@ -28,16 +29,13 @@
 #define DEBUG_PRINT(MSG)
 #endif
 
-// CRC calculation
-unsigned short calculateCRC(unsigned char *ptr, int len) {
-    unsigned short crc = 0xFFFF;
-    while (len--) {
-        crc = (crc >> 8) ^ crc_table[(crc ^ *ptr++) & 0xff];
-    }
-    return (crc);
+bool R4AVA07::isValid(short ch) {
+    return (ch >= 1 && ch <= CH_MAX);
 }
 
-bool isValid(uint8_t ch) { return (ch >= 1 && ch <= CH_MAX); }
+bool isValid(uint8_t ch) {
+    return (ch >= 1 && ch <= CH_MAX);
+}
 
 int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     uint8_t request[8];
@@ -113,7 +111,7 @@ int R4AVA07::connect(const char *port) {
         return -1;
     } else DEBUG_PRINT("Found at: " << ID);
 
-    // Find baud rate
+    // Set baud rate
     send(ID, MODBUS_WRITE, BAUD_REG << 16 | 0x01);
     baud = read_data[0];
     return fd;
