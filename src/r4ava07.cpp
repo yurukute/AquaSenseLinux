@@ -33,10 +33,6 @@ bool R4AVA07::isValid(short ch) {
     return (ch >= 1 && ch <= CH_MAX);
 }
 
-bool isValid(uint8_t ch) {
-    return (ch >= 1 && ch <= CH_MAX);
-}
-
 int R4AVA07::send(uint8_t rs485_addr, uint8_t func, uint32_t data) {
     uint8_t request[8];
     uint8_t response[BUFFER_SIZE];

@@ -1,4 +1,4 @@
-#include "../include/r4ava07.hpp"
+#include "../include/amvif08.hpp"
 #include "../include/vernier.hpp"
 #include <algorithm>
 #include <chrono>
@@ -21,9 +21,9 @@ const float Rl = 5930.434783;   // ADC resistance
 const int read_num = 4;         // Number of voltage inputs
 const int sample_rate = 10;     // 10 samples per read
 
-std::vector<float> voltage_sum(CH_MAX); // Store sum of voltage;
+std::vector<float> voltage_sum(read_num); // Store sum of voltage;
 float tmp = NAN, odo = NAN, fph = NAN;
-R4AVA07 ADC;
+AMVIF08 ADC;
 
 void readTemp() {
     SSTempSensor TMP;
