@@ -1,42 +1,38 @@
 #ifndef AMVIF08_H
 #define AMVIF08_H
-#include <vector>
 #include <cstdint>
+#include <vector>
+#include <string>
 #endif
 #define R4AVA07LIB_VERSION "1.0.0"
 
-#ifndef CRC16_H
-#include "../include/crc16.hpp"
+#ifndef MODBUS_RTU_H
+#include "modbus_rtu.hpp"
 #endif
 
-enum class Modbus;
-enum class Register;
-
-class AMVIF08 {
+class AMVIF08 : public ModbusDevice {
   private:
-    int fd;
-    uint16_t read_data[8] = {0x00};
-
-    unsigned short prod_id = 2408;
-    short return_time = 1000;
+    std::string name = "AMVIF08";
+    unsigned short prod_id = 2048;
+    short return_time;
     uint8_t addr;
     short baudrate = 9600;
     char parity = 'N';
 
   protected:
-    // Send command to AMVIF08 and read returned message in buffer
-    int send(uint8_t rs485_addr, Modbus func, uint32_t data);
     // Check if channel is in range 1-8
-    bool isValid(short ch);
-    
+    bool isValidChannel(unsigned short ch);
+
   public:
     int connect(const char* port);
-    // Read channel's voltage 
-    std::vector<float> readVoltage(uint32_t ch,
+    // Read channel's voltage
+    std::vector<float> readVoltage(uint16_t ch,
                                    uint8_t number = 0x01);
     // Return channel's voltage ratio
-    std::vector<float> getVoltageRatio(uint32_t ch,
+    std::vector<float> getVoltageRatio(uint16_t ch,
                                        uint8_t number = 0x01);
+    // Return device name
+    std::string getName()         { return name; }
     // Return product's ID
     unsigned short getProductID() { return prod_id; }
     // Return time interal for response in ms
@@ -49,15 +45,15 @@ class AMVIF08 {
     char getParity()              { return parity; }
 
     // Set channel's voltage ratio
-    short setVoltageRatio(short ch, float ratio);
+    short setVoltageRatio(uint16_t ch, float ratio);
     // Factory reset
     short factoryReset();
     // Set time interval for command return
-    short setReturnTime(short msec);
+    short setReturnTime(unsigned short msec);
     // Set slave's address
-    short setAddr(short new_addr);
+    short setAddr(unsigned short new_addr);
     // Change serial  baud rate
-    short setBaudRate(short baud = 9600);
+    short setBaudRate(unsigned short baud = 9600);
     // Change parity check type
-    short setParity(short type = 0);
+    short setParity(unsigned short type = 0);
 };

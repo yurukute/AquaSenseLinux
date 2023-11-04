@@ -1,24 +1,22 @@
 #ifndef R4AVA07_H
 #define R4AVA07_H
-#include <vector>
 #include <cstdint>
+#include <vector>
+#include <string>
 #endif
 #define R4AVA07LIB_VERSION "1.0.0"
 
-#ifndef CRC16_H
-#include "../include/crc16.hpp"
+#ifndef MODBUS_RTU_H
+#include "modbus_rtu.hpp"
 #endif
 
-class R4AVA07 {
+class R4AVA07 : public ModbusDevice {
   private:
+    std::string name = "R4AVA07";
     short ID;
     short baud;
-    int fd;
-    uint8_t read_data[7] = {0x00};
 
   protected:
-    // Send command to R4AVA07 and read returned message in buffer
-    int send(uint8_t rs485_addr, uint8_t func, uint32_t data);
     // Check channel range
     bool isValid(short ch);
 
@@ -29,9 +27,9 @@ class R4AVA07 {
     // Return current baud rate
     short getBaud() { return baud; };
     // Read channel's voltage 
-    std::vector<float> readVoltage(uint32_t ch, uint8_t number = 0x01);
+    std::vector<float> readVoltage(uint16_t ch, uint8_t number = 0x01);
     // Return channel's voltage ratio
-    std::vector<float> getVoltageRatio(uint32_t ch, uint8_t number = 0x01);
+    std::vector<float> getVoltageRatio(uint16_t ch, uint8_t number = 0x01);
 
     // Set slave's ID
     int setID(short new_id);

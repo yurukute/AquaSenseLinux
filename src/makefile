@@ -2,11 +2,12 @@ CXX   = arm-poky-linux-gnueabi-g++
 STRIP = arm-poky-linux-gnueabi-strip
 
 BUILD ?=
-BUILD_DIR = ../build/${BUILD}
-OBJ_DIR   = ../bin/${BUILD}
-INCL_DIR  = ../include
-SRC_DIR   = ./
-LIB_DIR   = ../lib
+PROJ_DIR  = ..
+BUILD_DIR = $(PROJ_DIR)/build/${BUILD}
+OBJ_DIR   = $(PROJ_DIR)/bin/${BUILD}
+INCL_DIR  = $(PROJ_DIR)/include
+SRC_DIR   = $(PROJ_DIR)/src
+LIB_DIR   = $(PROJ_DIR)/lib
 
 EXEC = $(BUILD_DIR)/exec
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
@@ -32,6 +33,9 @@ $(BUILD_DIR) $(OBJ_DIR) $(LIB_DIR):
 
 run: $(EXEC)
 	$<
+
+send:
+	scp -r $(PROJ_DIR)/{src,include} "matrix752:~/VernierRead/"
 
 clean:
 	rm -rf $(OBJ_DIR) $(BUILD_DIR)

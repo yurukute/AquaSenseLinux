@@ -1,7 +1,6 @@
-#include "../include/amvif08.hpp"
-#include "../include/vernier.hpp"
+#include "amvif08.hpp"
+#include "vernier.hpp"
 #include <algorithm>
-#include <chrono>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -105,7 +104,7 @@ void readVoltage() {
 int main() {
     using namespace std::chrono_literals;
 
-    std::cout << "Connecting R4AVA07..." << std::flush;
+    std::cout << "Connecting ..." << std::flush;
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
         std::this_thread::sleep_for(1s);
