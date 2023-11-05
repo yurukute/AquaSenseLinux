@@ -1,177 +1,115 @@
-#include "../include/amvif08.hpp"
-#include <algorithm>
+#include "amvif08.hpp"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-enum class Modbus {
-    read        = 0x03,
-    read_input  = 0x04,
-    write       = 0x06,
-    write_multi = 0x10,
-};
-
-enum class Register {
-  auto_report = 0x00F6,
-  product_id  = 0x00F7,
-  factory_rst = 0x00FB,
-  return_time = 0x00FC,
-  rs485_addr  = 0x00FD,
-  baudrate    = 0x00FE,
-  parity      = 0x00FF,
-};
-
-// Since the module has 7 channels, read data can be up to 14 bytes.
-// Plus 1 byte data size and 2 CRC bytes.
-#define BUFFER_SIZE 17
+#define PARITY_N 'N'
+#define PARITY_O '1'
+#define PARITY_E '2'
 #define ADDR_MAX 247
 #define CH_MAX 8
 #define BROADCAST 0xFF
 
-#ifdef DEBUG
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#define DEBUG_PRINT(MSG)               \
-{                                      \
-    std::cerr << __func__ << ", line " \
-              << __LINE__ << ":\t"     \
-              << MSG << "\n";          \
-}
-#else
-#define DEBUG_PRINT(MSG)
-#endif
+struct Registers {
+    static const uint16_t auto_report = 0x00F6;
+    static const uint16_t product_id  = 0x00F7;
+    static const uint16_t factory_rst = 0x00FB;
+    static const uint16_t return_time = 0x00FC;
+    static const uint16_t rs485_addr  = 0x00FD;
+    static const uint16_t baudrate    = 0x00FE;
+    static const uint16_t parity      = 0x00FF;
+};
 
-bool AMVIF08::isValid(short ch) {
+struct Defaults {
+    static const short prod_id     = 2048;
+    static const short return_time = 1000;
+    static const short baudrate    = 9600;
+    static const char  parity      = PARITY_N;
+};
+
+bool AMVIF08::isValidChannel(short ch) {
     return (ch >= 1 && ch <= CH_MAX);
 }
 
-int AMVIF08::send(uint8_t rs485_addr, Modbus func, uint32_t data) {
-    uint8_t request[8];
-    uint8_t response[BUFFER_SIZE];
-    int read_size;
-
-    request[0] = rs485_addr;
-    request[1] = static_cast<uint8_t>(func);
-    *(uint32_t *)(&request[2]) = htonl(data);
-    *(uint16_t *)(&request[6]) = calculateCRC(&request[0], 6);
-
-    write(fd, request, 8);
-    sleep(1);
+void AMVIF08::showSettings() {
     
-    read_size = read(fd, response, sizeof(response));
-
-#ifdef DEBUG
-    std::ostringstream msg;
-    msg << std::hex << std::setfill('0') << std::uppercase;
-    for (int x : request) {
-        msg << std::setw(2) << x << " ";
-    }
-    DEBUG_PRINT("Send message:\t" << msg.str());
-    if (read_size > 0) {
-        msg.str("");
-        for (int i = 0; i < read_size; i++) {
-            msg << std::setw(2)
-                << static_cast<int>(response[i]) << " ";
-        }
-        DEBUG_PRINT("Return:      \t" << msg.str());
-    }
-    else DEBUG_PRINT("Send failed.");
-#endif
-
-    if (read_size > 0) {
-        switch (func) {
-        case Modbus::read: case Modbus::read_input:
-            int data_size, header;
-            if (rs485_addr == BROADCAST) {
-                data_size = response[0]/2;
-                header = 1;
-            }
-            else {
-                data_size = response[2]/2;
-                header = 3;
-            }
-            for (auto i = 0; i < data_size; i++) {
-                // Skip header, read 2 bytes each.
-                auto pos = 2*i+header;
-                read_data[i] = response[pos] << 8 | response[pos+1];
-            }
-            break;
-        case Modbus::write:
-            {
-                uint16_t *set_value = (uint16_t *)(&request[4]);
-                uint16_t *reg_value = (uint16_t *)(&response[4]);
-                if(*set_value != *reg_value) {
-                    read_size = -1;
-                }
-                break;
-            }
-        case Modbus::write_multi:
-            // TODO
-            break;
-        } 
-    }
-    return read_size;
 }
 
 int AMVIF08::connect(const char *port) {
-    fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
-    if (fd < 0) {
-        DEBUG_PRINT("Open port" << port << " failed: " << errno);
+    if (ModbusDevice::connect(port) < 1) {
         return -1;
     }
 
+    uint16_t read_data[1];
     // Find device's address
-    send(BROADCAST, Modbus::read,
-         static_cast<uint16_t>(Register::rs485_addr) << 16 | 0x01);
+    sendRead(BROADCAST, Registers::rs485_addr, 0x01, read_data);
     addr = read_data[0];
     if (!addr) { // Address not found.
         DEBUG_PRINT("Cannot find device address.");
         return -1;
-    } else DEBUG_PRINT("Found at: " << addr);
+    }
 
     // Find baud rate
-    send(addr, Modbus::read,
-         static_cast<uint16_t>(Register::baudrate) << 16 | 0x01);
+    sendRead(addr, Registers::baudrate, 0x01, read_data);
     baudrate = read_data[0];
-    return fd;
+
+    // Find return time
+    sendRead(addr, Registers::return_time, 0x01, read_data);
+    return_time = read_data[0];
+
+    // Find parity type
+    sendRead(addr, Registers::parity, 0x01, read_data);
+    switch (read_data[0]) {
+    case 0: parity = 'N'; break;
+    case 1: parity = '1'; break;
+    case 2: parity = '2'; break;
+    }
+    
+    DEBUG_PRINT("Device found at " << (int) addr << "\n"
+                "Baudrate:\t" << baudrate << "\n"
+                "Return time:\t" << return_time << "\n"
+                "Parity type:\t" << parity)
+    return 0;
 }
 
 std::vector<float>  AMVIF08::readVoltage(uint32_t ch, uint8_t number) {
     std::vector<float> voltage;
-    if (isValid(ch) == false) {
+    uint16_t read_data[number];
+
+    if (isValidChannel(ch) == false) {
         DEBUG_PRINT("Invalid channel: " << ch);
     }
-    else if (isValid(ch + number -1) == false) {
+    else if (isValidChannel(ch + number -1) == false) {
         DEBUG_PRINT("Invalid read number: " << number);
     }
     // Channel 1-7 indicated at 0x00A0-0x00A7.
-    else if (send(addr, Modbus::read, (ch+0xA0) << 16 | number) < 1) {
+    else if (sendRead(addr, ch-1 + 0x00A0, number, read_data) < 0) {
         DEBUG_PRINT("Cannot read voltage values.");
     }
     else {
-        for (auto i = 0; i < number; i++) {
+        for (int i = 0; i < number; i++) {
             voltage.push_back((float) read_data[i] / 100.0);
         }
     }
     return voltage;
 }
 
-std::vector<float> AMVIF08::getVoltageRatio(uint32_t ch,
-                                            uint8_t number) {
+std::vector<float> AMVIF08::getVoltageRatio(uint32_t ch, uint8_t number) {
     std::vector<float> ratio;
-    if (isValid(ch) == false) {
+    uint16_t read_data[number];
+
+    if (isValidChannel(ch) == false) {
         DEBUG_PRINT("Invalid channel: " << ch);
     }
-    else if (isValid(ch + number -1) == false) {
+    else if (isValidChannel(ch + number -1) == false) {
         DEBUG_PRINT("Invalid read number: " << number);
     }
     // Channel 1-7 indicated at 0x00C0-0x00C7.
-    else if (send(addr, Modbus::read, (ch+0xC0) << 16 | number) < 1) {
+    else if (sendRead(addr, ch-1 + 0x00C0, number, read_data)) {
         DEBUG_PRINT("Cannot read voltage ratios.");
     }
     else {
-        for (auto i = 0; i < number; i++) {
+        for (int i = 0; i < number; i++) {
             ratio.push_back((float) read_data[i] / 1000.0);
         }
     }
@@ -179,19 +117,27 @@ std::vector<float> AMVIF08::getVoltageRatio(uint32_t ch,
 }
 
 short AMVIF08::factoryReset() {
-    return send(BROADCAST, Modbus::write,
-                static_cast<uint16_t>(Register::factory_rst) << 16);
+    if (sendWrite(BROADCAST, Registers::factory_rst, 0) < 0) {
+        return -1;
+    }
+
+    prod_id     = Defaults::prod_id;
+    return_time = Defaults::return_time;
+    baudrate    = Defaults::baudrate;
+    parity      = Defaults::parity;
+    return 0;
 }
 
 short AMVIF08::setReturnTime(short msec) {
     if (msec < 0 || msec > 1000) {
-        DEBUG_PRINT("Invalid return time");
+        DEBUG_PRINT("Invalid return time.");
         return -1;
     }
-    uint16_t reg = static_cast<uint16_t>(Register::return_time);
-    if (send(addr, Modbus::write, reg << 16 | (msec / 40)) < 0) {
+    if (sendWrite(addr, Registers::return_time, msec / 40) < 0) {
+        DEBUG_PRINT("Cannot set return time.");
         return -1;
     }
+
     return_time = msec;
     return 0;
 }
@@ -201,9 +147,7 @@ short AMVIF08::setAddr(short newaddr) {
         DEBUG_PRINT("Invalid address (1-" << ADDR_MAX << ").");
         return -1;
     }
-    
-    if (send(addr, Modbus::write,
-             static_cast<int>(Register::rs485_addr) << 16 | newaddr) < 0) {
+    if (sendWrite(addr, Registers::rs485_addr, newaddr) < 0) {
         DEBUG_PRINT("Cannot set addr.");
         return -1;
     }
@@ -213,9 +157,12 @@ short AMVIF08::setAddr(short newaddr) {
 }
 
 short AMVIF08::setVoltageRatio(short ch, float ratio) {
+    if (ratio < 0 || ratio > 1) {
+        DEBUG_PRINT("Invalid ratio value (0 -> 1).");
+        return -1;
+    }
     // Channel 1-8 indicated at 0x00C0-0x00C7.
-    uint16_t val = ratio * 1000;
-    if (send(addr, Modbus::write, (ch+0x00C0) << 16 | val) < 0) {
+    if (sendWrite(addr, ch-1 + 0x00C0, ratio * 1000) < 0) {
         DEBUG_PRINT("Cannot set voltage ratio");
         return -1;
     }
@@ -238,9 +185,9 @@ short AMVIF08::setBaudRate(short target_baud) {
         return -1;
     }
 
-    if (send(addr, Modbus::write,
-             static_cast<uint16_t>(Register::baudrate) << 16 | baud_code) < 1) {
+    if (sendWrite(addr, Registers::baudrate, baud_code) < 0) {
         DEBUG_PRINT("Cannot change baud rate.");
+        return -1;
     }
 
     baudrate = target_baud;

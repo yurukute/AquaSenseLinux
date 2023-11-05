@@ -35,5 +35,8 @@ $(BUILD_DIR) $(OBJ_DIR) $(LIB_DIR):
 run: $(EXEC)
 	$<
 
+send: $(EXEC)
+	scp $(EXEC) "matrix518:~/VernierRead"
+
 clean:
 	rm -rf $(OBJ_DIR) $(BUILD_DIR)

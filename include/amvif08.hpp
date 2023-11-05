@@ -5,33 +5,26 @@
 #endif
 #define R4AVA07LIB_VERSION "1.0.0"
 
-#ifndef CRC16_H
-#include "../include/crc16.hpp"
+#ifndef MODBUS_RTU_H
+#include "modbus_rtu.hpp"
 #endif
 
-enum class Modbus;
-enum class Register;
-
-class AMVIF08 {
+class AMVIF08 : public ModbusDevice {
   private:
-    int fd;
-    uint16_t read_data[8] = {0x00};
-
-    unsigned short prod_id = 2408;
-    short return_time = 1000;
+    unsigned short prod_id;
+    short return_time;
     uint8_t addr;
-    short baudrate = 9600;
-    char parity = 'N';
+    short baudrate;
+    char parity;
 
   protected:
-    // Send command to AMVIF08 and read returned message in buffer
-    int send(uint8_t rs485_addr, Modbus func, uint32_t data);
     // Check if channel is in range 1-8
-    bool isValid(short ch);
-    
+    bool isValidChannel(short ch);
+
   public:
     int connect(const char* port);
-    // Read channel's voltage 
+    void showSettings();
+    // Read channel's voltage
     std::vector<float> readVoltage(uint32_t ch,
                                    uint8_t number = 0x01);
     // Return channel's voltage ratio
