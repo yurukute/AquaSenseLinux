@@ -21,18 +21,14 @@ struct Registers {
 };
 
 struct Defaults {
-    static const short prod_id     = 2048;
-    static const short return_time = 1000;
-    static const short baudrate    = 9600;
-    static const char  parity      = PARITY_N;
+    static const unsigned short prod_id     = 2048;
+    static const unsigned short return_time = 1000;
+    static const unsigned short baudrate    = 9600;
+    static const char  parity               = PARITY_N;
 };
 
-bool AMVIF08::isValidChannel(short ch) {
-    return (ch >= 1 && ch <= CH_MAX);
-}
-
-void AMVIF08::showSettings() {
-    
+bool AMVIF08::isValidChannel(unsigned short ch) {
+    return (ch > 0 && ch <= CH_MAX);
 }
 
 int AMVIF08::connect(const char *port) {
@@ -128,8 +124,8 @@ short AMVIF08::factoryReset() {
     return 0;
 }
 
-short AMVIF08::setReturnTime(short msec) {
-    if (msec < 0 || msec > 1000) {
+short AMVIF08::setReturnTime(unsigned short msec) {
+    if (msec > 1000) {
         DEBUG_PRINT("Invalid return time.");
         return -1;
     }
@@ -142,13 +138,13 @@ short AMVIF08::setReturnTime(short msec) {
     return 0;
 }
 
-short AMVIF08::setAddr(short newaddr) {
+short AMVIF08::setAddr(unsigned short newaddr) {
     if (newaddr < 1 || newaddr > ADDR_MAX) {
         DEBUG_PRINT("Invalid address (1-" << ADDR_MAX << ").");
         return -1;
     }
     if (sendWrite(addr, Registers::rs485_addr, newaddr) < 0) {
-        DEBUG_PRINT("Cannot set addr.");
+        DEBUG_PRINT("Cannot set address.");
         return -1;
     }
     
@@ -156,20 +152,24 @@ short AMVIF08::setAddr(short newaddr) {
     return 0;
 }
 
-short AMVIF08::setVoltageRatio(short ch, float ratio) {
+short AMVIF08::setVoltageRatio(unsigned short ch, float ratio) {
+    if (isValidChannel(ch) == false) {
+        DEBUG_PRINT("Invalid channel: " << ch);
+        return -1;
+    }
     if (ratio < 0 || ratio > 1) {
-        DEBUG_PRINT("Invalid ratio value (0 -> 1).");
+        DEBUG_PRINT("Invalid ratio value: " << value);
         return -1;
     }
     // Channel 1-8 indicated at 0x00C0-0x00C7.
     if (sendWrite(addr, ch-1 + 0x00C0, ratio * 1000) < 0) {
-        DEBUG_PRINT("Cannot set voltage ratio");
+        DEBUG_PRINT("Cannot set voltage ratio.");
         return -1;
     }
     return 0;
 }
 
-short AMVIF08::setBaudRate(short target_baud) {
+short AMVIF08::setBaudRate(unsigned short target_baud) {
     uint16_t baud_code;
     switch (target_baud) {
     case 1200:   baud_code = 0; break;

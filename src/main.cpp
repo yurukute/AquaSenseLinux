@@ -1,5 +1,5 @@
-#include "../include/amvif08.hpp"
-#include "../include/vernier.hpp"
+#include "amvif08.hpp"
+#include "vernier.hpp"
 #include <iomanip>
 #include <iostream>
 #include <algorithm>

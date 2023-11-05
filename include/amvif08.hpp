@@ -19,11 +19,10 @@ class AMVIF08 : public ModbusDevice {
 
   protected:
     // Check if channel is in range 1-8
-    bool isValidChannel(short ch);
+    bool isValidChannel(unsigned short ch);
 
   public:
     int connect(const char* port);
-    void showSettings();
     // Read channel's voltage
     std::vector<float> readVoltage(uint32_t ch,
                                    uint8_t number = 0x01);
@@ -42,15 +41,15 @@ class AMVIF08 : public ModbusDevice {
     char getParity()              { return parity; }
 
     // Set channel's voltage ratio
-    short setVoltageRatio(short ch, float ratio);
+    short setVoltageRatio(unsigned short ch, float ratio);
     // Factory reset
     short factoryReset();
     // Set time interval for command return
-    short setReturnTime(short msec);
+    short setReturnTime(unsigned short msec);
     // Set slave's address
-    short setAddr(short new_addr);
+    short setAddr(unsigned short new_addr);
     // Change serial  baud rate
-    short setBaudRate(short baud = 9600);
+    short setBaudRate(unsigned short baud = 9600);
     // Change parity check type
-    short setParity(short type = 0);
+    short setParity(unsigned short type = 0);
 };
