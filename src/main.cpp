@@ -4,37 +4,45 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <vector>
+#include <mosquittopp.h>
 
 #define VIN_CH 0
 #define TMP_CH 1
 #define ODO_CH 2
 #define FPH_CH 3
+#define BOARD "matrix752"
 
 #ifndef PORT
 #define PORT "/dev/ttymxc1"
 #endif
 
+#ifndef SERVER
+#define SERVER "test.mosquitto.org"
+#define TCP_PORT 1883
+#endif
+
+using namespace std::chrono;
+
 const float Rl = 5930.434783;   // ADC resistance
 const int read_num = 4;         // Number of voltage inputs
 const int sample_rate = 10;     // 10 samples per read
 
-std::vector<float> voltage_sum(read_num); // Store sum of voltage;
+std::vector<float> voltage_avg(read_num); // Store sum of voltage;
 float tmp = NAN, odo = NAN, fph = NAN;
 AMVIF08 ADC;
 
 void readTemp() {
     SSTempSensor TMP;
-    std::chrono::seconds response_time((int) TMP.getResponseTime());
+    int response_time = TMP.getResponseTime();
+    std::this_thread::sleep_for(seconds(response_time));
+
     while (true) {
-        std::this_thread::sleep_for(response_time);
         // Calculate average
-        float vin  = voltage_sum[VIN_CH] / response_time.count();
-        float vout = voltage_sum[TMP_CH] / response_time.count();
-        // Reset readings
-        voltage_sum[VIN_CH] = 0;
-        voltage_sum[TMP_CH] = 0;
+        float vin  = voltage_avg[VIN_CH];
+        float vout = voltage_avg[TMP_CH];
         // Schematic:
         //   Rt: Thermistor
         //   R1: Divider resistor (Vernier's BTA protoboard)
@@ -54,44 +62,47 @@ void readTemp() {
             tmp = TMP.calculateTemp(Rp);
         }
         else tmp = NAN;
+        std::this_thread::sleep_for(1s);
     }
 }
 
 void readODO() {
     ODOSensor ODO;
-    std::chrono::seconds response_time((int) ODO.getResponseTime());
+    int response_time = ODO.getResponseTime();
+    std::this_thread::sleep_for(seconds(response_time));
+
     while (true) {
-        std::this_thread::sleep_for(response_time);
         // Calculate average
-        float vout = voltage_sum[ODO_CH] / response_time.count();
-        // Reset reading
-        voltage_sum[ODO_CH] = 0;
+        float vout = voltage_avg[ODO_CH];
         if (vout > 0.0) {
             odo = ODO.readSensor(vout);
         }
         else vout = NAN;
+        std::this_thread::sleep_for(1s);
     }
 }
 
 void readFPH() {
     FPHSensor FPH;
-    std::chrono::seconds response_time((int) FPH.getResponseTime());
+    int response_time = FPH.getResponseTime();
+    std::this_thread::sleep_for(seconds(response_time));
+
     while (true) {
-        std::this_thread::sleep_for(response_time);
-        float vout = voltage_sum[FPH_CH] / response_time.count();
+        float vout = voltage_avg[FPH_CH];
         if (vout > 0.0) {
             fph = FPH.readSensor(vout);
         }
         else fph = NAN;
+        std::this_thread::sleep_for(1s);
     }
 }
 
 void readVoltage() {
     std::vector<float> voltage_read;
     voltage_read = ADC.readVoltage(1, read_num);
-    std::transform(voltage_sum.begin(), voltage_sum.end(),
+    std::transform(voltage_avg.begin(), voltage_avg.end(),
                    voltage_read.begin(),
-                   voltage_sum.begin(), std::plus<float>());
+                   voltage_avg.begin(), std::plus<float>());
 
     std::cout << "Voltage read:\n\tCH1\tCH2\tCH3\tCH4\n"
               << std::setprecision(2);
@@ -102,14 +113,22 @@ void readVoltage() {
 }
 
 int main() {
-    using namespace std::chrono_literals;
+    std::string msg;
+    mosqpp::mosquittopp matrix752;
 
-    std::cout << "Connecting ..." << std::flush;
+    std::cout << "Connecting to voltage collector..." << std::flush;
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
         std::this_thread::sleep_for(1s);
     }
     std::cout << std::endl;
+
+    std::cout << "Connecting to server..." << std::flush;
+    while (matrix752.connect_async(SERVER, TCP_PORT) != MOSQ_ERR_SUCCESS) {
+        std::cout << "." << std::flush;
+        std::this_thread::sleep_for(1s);
+    }
+    matrix752.loop_start();
 
     std::thread temp_reader(readTemp);
     temp_reader.detach();
@@ -121,16 +140,33 @@ int main() {
     fph_reader.detach();
 
     while (true) {
-        std::chrono::milliseconds delay_time(1000/sample_rate);
         for (int i = 0; i < sample_rate; i++) {
             std::thread voltage_reader(readVoltage);
             voltage_reader.detach();
-            std::this_thread::sleep_for(delay_time);
+            std::this_thread::sleep_for(milliseconds(1000/sample_rate));
         }
-        std::this_thread::sleep_for(2s);
-        std::cout << "Temperature: " << tmp
-                  << "\nDissolved oxygen: " << odo
-                  << "\npH: " << fph
-                  << std::endl;
+        std::this_thread::sleep_for(1s);
+        // Calculate averages
+        for (auto &v : voltage_avg) {
+            v /= sample_rate;
+        }
+        // Publish temperature data
+        msg = "Temperature: " + std::to_string(tmp);
+        matrix752.publish(NULL, BOARD "/vernier/tmp-bta",
+                          msg.size(), &msg, 1);
+        std::cout << msg << "\n";
+        // Publish dissolved oxygen data
+        msg = "Dissolved oxygen: " + std::to_string(tmp);
+        matrix752.publish(NULL, BOARD "/vernier/odo-bta",
+                          msg.size(), &msg, 1);
+        std::cout << msg << "\n";
+        // Publish temperature data
+        msg = "pH: " + std::to_string(tmp);
+        matrix752.publish(NULL, BOARD "/vernier/fph-bta",
+                          msg.size(), &msg, 1);
+        std::cout << msg << std::endl;
     }
+
+    matrix752.loop_stop();
+    mosqpp::lib_cleanup();
 }

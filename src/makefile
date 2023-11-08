@@ -15,7 +15,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 CXXFLAGS.      = -I$(INCL_DIR) -Wall -O2 -march=armv7-a -mfloat-abi=hard -mfpu=neon-vfpv4
 CXXFLAGS.debug =  $(CXXFLAGS.) -g -DDEBUG
-LDLIBS = -lpthread # Load libraries
+LDLIBS = -lpthread -lmosquittopp # Link libraries
 
 .PHONY: all run clean
 
