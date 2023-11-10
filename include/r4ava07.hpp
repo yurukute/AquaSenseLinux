@@ -3,17 +3,15 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <modbus/modbus.h>
 #endif
 #define R4AVA07LIB_VERSION "1.0.0"
 
-#ifndef MODBUS_RTU_H
-#include "modbus_rtu.hpp"
-#endif
-
-class R4AVA07 : public ModbusDevice {
+class R4AVA07 {
   private:
+    modbus_t *ctx;
     std::string name = "R4AVA07";
-    short ID;
+    std::string rs485_port;
     short baud;
 
   protected:
@@ -23,7 +21,7 @@ class R4AVA07 : public ModbusDevice {
   public:
     int connect(const char* port);
     // Return slave's ID
-    short getID()   { return ID; };
+    short getID()   { return modbus_get_slave(ctx); };
     // Return current baud rate
     short getBaud() { return baud; };
     // Read channel's voltage 

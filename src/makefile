@@ -10,12 +10,12 @@ SRC_DIR   = $(PROJ_DIR)/src
 LIB_DIR   = $(PROJ_DIR)/lib
 
 EXEC = $(BUILD_DIR)/exec
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+SRCS = $(filter-out $(SRC_DIR)/r4ava07.cpp, $(wildcard $(SRC_DIR)/*.cpp))
 OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
 CXXFLAGS.      = -I$(INCL_DIR) -Wall -O2 -march=armv7-a -mfloat-abi=hard -mfpu=neon-vfpv4
 CXXFLAGS.debug =  $(CXXFLAGS.) -g -DDEBUG
-LDLIBS = -lpthread -lmosquittopp # Link libraries
+LDLIBS = -lpthread -lmodbus -lmosquittopp # Link libraries
 
 .PHONY: all run clean
 

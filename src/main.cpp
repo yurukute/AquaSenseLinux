@@ -1,6 +1,7 @@
 #include "amvif08.hpp"
 #include "vernier.hpp"
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -100,6 +101,9 @@ void readFPH() {
 void readVoltage() {
     std::vector<float> voltage_read;
     voltage_read = ADC.readVoltage(1, read_num);
+    if (voltage_read.empty()) {
+        return;
+    }
     std::transform(voltage_avg.begin(), voltage_avg.end(),
                    voltage_read.begin(),
                    voltage_avg.begin(), std::plus<float>());
@@ -141,15 +145,15 @@ int main() {
 
     while (true) {
         for (int i = 0; i < sample_rate; i++) {
-            std::thread voltage_reader(readVoltage);
-            voltage_reader.detach();
+            readVoltage();
             std::this_thread::sleep_for(milliseconds(1000/sample_rate));
         }
-        std::this_thread::sleep_for(1s);
+
         // Calculate averages
         for (auto &v : voltage_avg) {
             v /= sample_rate;
         }
+
         // Publish temperature data
         msg = "Temperature: " + std::to_string(tmp);
         matrix752.publish(NULL, BOARD "/vernier/tmp-bta",
