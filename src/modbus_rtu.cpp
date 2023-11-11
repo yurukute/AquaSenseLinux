@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+ModbusDevice::~ModbusDevice() {}
+
 int ModbusDevice::connect(const char *port) {
     fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd < 0) {
@@ -28,7 +30,7 @@ int ModbusDevice::send(uint8_t rs485_addr, ModbusFunctionCode func, const uint8_
     *(uint16_t *)(&request[data_size + 2]) = calculateCRC(&request[0], 6);
 
     write(fd, request, data_size + 4);
-    sleep(1);
+    usleep(50000);
     
     read_size = read(fd, response, sizeof(response));
 

@@ -158,7 +158,7 @@ short AMVIF08::setVoltageRatio(unsigned short ch, float ratio) {
         return -1;
     }
     if (ratio < 0 || ratio > 1) {
-        DEBUG_PRINT("Invalid ratio value: " << value);
+        DEBUG_PRINT("Invalid ratio value: " << ratio);
         return -1;
     }
     // Channel 1-8 indicated at 0x00C0-0x00C7.

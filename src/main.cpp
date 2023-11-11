@@ -17,6 +17,11 @@
 #define PORT "/dev/ttyS1"
 #endif
 
+#ifndef SERVER
+#define SERVER "test.mosquitto.org"
+#define TCP_PORT 1883
+#endif
+
 const float Rl = 5930.434783; // ADC resistance
 const int sample_rate = 10;   // 10 samples per read
 const int read_num    = 4;    // Number of voltage inputs
@@ -27,8 +32,8 @@ AMVIF08 ADC;
 
 void *readTemp(void *arg) {
     SSTempSensor TMP;
+    sleep(TMP.getResponseTime());
     while (true) {
-        sleep(TMP.getResponseTime());
         float vin  = voltage_sum[VIN_CH] / sample_rate;
         float vout = voltage_sum[TMP_CH] / sample_rate;
         // Schematic:
@@ -77,7 +82,7 @@ void *readFPH(void *arg) {
     }
 }
 
-void *readVoltage(void *arg) {
+void readVoltage() {
     std::vector<float> voltage_read;
     voltage_read = ADC.readVoltage(1, read_num);
     if (!voltage_read.empty()){
@@ -92,11 +97,10 @@ void *readVoltage(void *arg) {
         }
         std::cout << std::endl;
     }
-    pthread_exit(NULL);
 }
 
 int main() {
-    std::cout << "Connecting R4AVA07..." << std::flush;
+    std::cout << "Connecting ADC device..." << std::flush;
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
         sleep(1);
@@ -115,12 +119,10 @@ int main() {
 
     while (true) {
         for (int i = 0; i < sample_rate; i++) {
-            pthread_t volt_reader;
-            pthread_create(&volt_reader, NULL, readVoltage, NULL);
-            pthread_detach(volt_reader);
-            usleep(1000 / sample_rate);
+            readVoltage();
+            usleep(1000000 / sample_rate);
         }
-        sleep(1);
+
         std::cout << "Temperature: " << tmp
                   << "\nDissolved oxygen: " << odo
                   << "\npH: " << fph
