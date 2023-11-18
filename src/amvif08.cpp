@@ -69,8 +69,8 @@ int AMVIF08::connect(const char *port) {
     modbus_set_debug(ctx, true);
 #endif
 
-    int flags =  MODBUS_QUIRK_MAX_SLAVE | MODBUS_QUIRK_REPLY_TO_BROADCAST;
-    modbus_enable_quirks(ctx, flags);
+    // int flags =  MODBUS_QUIRK_MAX_SLAVE | MODBUS_QUIRK_REPLY_TO_BROADCAST;
+    // modbus_enable_quirks(ctx, flags);
     modbus_set_slave(ctx, 1);
 
     if (modbus_connect(ctx) < 0) {
@@ -214,7 +214,7 @@ short AMVIF08::setBaudRate(unsigned short target_baud) {
 }
 
 short AMVIF08::setParity(char type) {
-    uint16_t paritycode;
+    uint16_t paritycode = Defaults::parity;
     switch (type) {
     case PARITY_N: paritycode = 0; break;
     case PARITY_O: paritycode = 1; break;

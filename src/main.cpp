@@ -31,6 +31,10 @@ const float Rl = 5930.434783;   // ADC resistance
 const int read_num = 4;         // Number of voltage inputs
 const int sample_rate = 10;     // 10 samples per read
 
+const char *tmp_topic = BOARD "/vernier/tmp-bta";
+const char *odo_topic = BOARD "/vernier/odo-bta";
+const char *fph_topic = BOARD "/vernier/fph-bta";
+
 std::vector<float> voltage_avg(read_num); // Store sum of voltage;
 float tmp = NAN, odo = NAN, fph = NAN;
 AMVIF08 ADC;
@@ -156,18 +160,15 @@ int main() {
 
         // Publish temperature data
         msg = "Temperature: " + std::to_string(tmp);
-        matrix752.publish(NULL, BOARD "/vernier/tmp-bta",
-                          msg.size(), &msg, 1);
+        matrix752.publish(NULL, tmp_topic, msg.size(), msg.c_str(), 1);
         std::cout << msg << "\n";
         // Publish dissolved oxygen data
         msg = "Dissolved oxygen: " + std::to_string(tmp);
-        matrix752.publish(NULL, BOARD "/vernier/odo-bta",
-                          msg.size(), &msg, 1);
+        matrix752.publish(NULL, odo_topic, msg.size(), msg.c_str(), 1);
         std::cout << msg << "\n";
         // Publish temperature data
         msg = "pH: " + std::to_string(tmp);
-        matrix752.publish(NULL, BOARD "/vernier/fph-bta",
-                          msg.size(), &msg, 1);
+        matrix752.publish(NULL, fph_topic, msg.size(), msg.c_str(), 1);
         std::cout << msg << std::endl;
     }
 
