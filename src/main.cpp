@@ -2,6 +2,7 @@
 #include "vernier.hpp"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -27,7 +28,6 @@
 
 using namespace std::chrono;
 
-const float Rl = 5930.434783;   // ADC resistance
 const int read_num = 4;         // Number of voltage inputs
 const int sample_rate = 10;     // 10 samples per read
 
@@ -38,6 +38,7 @@ const char *fph_topic = BOARD "/vernier/fph-bta";
 std::vector<float> voltage_avg(read_num); // Store sum of voltage;
 float tmp = NAN, odo = NAN, fph = NAN;
 AMVIF08 ADC;
+mosqpp::mosquittopp matrix752;
 
 void readTemp() {
     SSTempSensor TMP;
@@ -45,26 +46,16 @@ void readTemp() {
     std::this_thread::sleep_for(seconds(response_time));
 
     while (true) {
-        // Calculate average
-        float vin  = voltage_avg[VIN_CH];
         float vout = voltage_avg[TMP_CH];
         // Schematic:
         //   Rt: Thermistor
         //   R1: Divider resistor (Vernier's BTA protoboard)
-        //   Rl: Load resistor (R4AVA07 ADC)
         //
         // [GND] --- [Rt] ----- | ----- [R1] -----[VCC (5v)]
-        //       |              |
-        //       |-- [Rl] ----- |
         //                      |
         //               [Analog input]
-        // Parallel resistance:
-        // Rp   = Rt*Rl/(Rt+Rl)
-        // Vout = Vin*Rp/(R1+Rp)
         if (vout > 0.0) {
-            float R1 = TMP.getDividerResistance();
-            float Rp = 1/(vin/(R1*vout) - 1/Rl - 1/R1);
-            tmp = TMP.calculateTemp(Rp);
+            tmp = TMP.readSensor(vout);
         }
         else tmp = NAN;
         std::this_thread::sleep_for(1s);
@@ -120,10 +111,21 @@ void readVoltage() {
     std::cout << "\n";
 }
 
-int main() {
-    std::string msg;
-    mosqpp::mosquittopp matrix752;
+void publishSensorData(const char* topic, std::string name, float value) {
+    if (std::isnan(value)) {
+        value = 0.0;
+    }
+    
+    std::string msg = "{";
+    msg += "\"name\":" + name + ",";
+    msg += "\"value\":" + std::to_string(value);
+    msg += "}";
 
+    matrix752.publish(NULL, topic, msg.size(), msg.c_str(), 1);
+    std::cout << msg << "\n";        
+}
+
+int main() {
     std::cout << "Connecting to voltage collector..." << std::flush;
     while (ADC.connect(PORT) < 0) {
         std::cout << "." << std::flush;
@@ -158,18 +160,10 @@ int main() {
             v /= sample_rate;
         }
 
-        // Publish temperature data
-        msg = "Temperature: " + std::to_string(tmp);
-        matrix752.publish(NULL, tmp_topic, msg.size(), msg.c_str(), 1);
-        std::cout << msg << "\n";
-        // Publish dissolved oxygen data
-        msg = "Dissolved oxygen: " + std::to_string(tmp);
-        matrix752.publish(NULL, odo_topic, msg.size(), msg.c_str(), 1);
-        std::cout << msg << "\n";
-        // Publish temperature data
-        msg = "pH: " + std::to_string(tmp);
-        matrix752.publish(NULL, fph_topic, msg.size(), msg.c_str(), 1);
-        std::cout << msg << std::endl;
+        // Publish sensor data
+        publishSensorData(tmp_topic, "Temperature", tmp);
+        publishSensorData(odo_topic, "Dissolved oxygen", odo);
+        publishSensorData(fph_topic, "pH", fph);
     }
 
     matrix752.loop_stop();
