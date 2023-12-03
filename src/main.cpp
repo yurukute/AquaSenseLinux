@@ -42,6 +42,23 @@ float tmp = NAN, odo = NAN, fph = NAN;
 AMVIF08 ADC;
 mosqpp::mosquittopp matrix752;
 
+void publishSensorData(const char* topic, std::string name, float value) {
+    if (std::isnan(value)) {
+        value = 0.0;
+    }
+
+    std::string msg = "{";
+    msg += "\"name\":\"" + name + "\",";
+    msg += "\"value\":" + std::to_string(value);
+    msg += "}";
+
+    int rc = matrix752.publish(NULL, topic, msg.size(), msg.c_str(), 1);
+    if (rc == MOSQ_ERR_SUCCESS){
+        std::cout << msg << std::endl;
+    }
+    else std::cerr << "Publish failed. ERR: " << rc << std::endl;
+}
+
 float getVout(int ch) {
     voltage_avg_mutex.lock();
     float vout = voltage_avg[ch];
@@ -60,6 +77,7 @@ void readTemp() {
             tmp = TMP.readSensor(vout);
         }
         else tmp = NAN;
+        publishSensorData(tmp_topic, "Temperature", tmp);
         std::this_thread::sleep_for(1s);
     }
 }
@@ -75,6 +93,7 @@ void readODO() {
             odo = ODO.readSensor(vout);
         }
         else vout = NAN;
+        publishSensorData(odo_topic, "Dissolved oxygen", odo);
         std::this_thread::sleep_for(1s);
     }
 }
@@ -90,6 +109,7 @@ void readFPH() {
             fph = FPH.readSensor(vout);
         }
         else fph = NAN;
+        publishSensorData(fph_topic, "pH", fph);
         std::this_thread::sleep_for(1s);
     }
 }
@@ -112,20 +132,6 @@ void readVoltage() {
         v /= sample_rate;
     }
     voltage_avg_mutex.unlock();
-}
-
-void publishSensorData(const char* topic, std::string name, float value) {
-    if (std::isnan(value)) {
-        value = 0.0;
-    }
-    
-    std::string msg = "{";
-    msg += "\"name\":" + name + ",";
-    msg += "\"value\":" + std::to_string(value);
-    msg += "}";
-
-    matrix752.publish(NULL, topic, msg.size(), msg.c_str(), 1);
-    //std::cout << msg << "\n";
 }
 
 int main() {
@@ -165,11 +171,6 @@ int main() {
         }
         std::cout << std::endl;
         voltage_avg_mutex.unlock();
-        // Publish sensor data
-        publishSensorData(tmp_topic, "Temperature", tmp);
-        publishSensorData(odo_topic, "Dissolved oxygen", odo);
-        publishSensorData(fph_topic, "pH", fph);
-
         std::this_thread::sleep_for(1s);
     }
 
