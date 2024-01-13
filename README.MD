@@ -1,5 +1,5 @@
 # AquaSenseLinux
-*Note This is a version developed for Artila Matrix752 and/or Matrix518 which are Linux ARM based. For Matrix-310 (Arduino-based) version, please visit the [AquaSense](https://github.com/yurukute/AquaSense/) repository.*
+*Note: This is a version developed for Artila Matrix752 and/or Matrix518 which are Linux ARM based. For Matrix-310 (Arduino-based) version, please visit the [AquaSense](https://github.com/yurukute/AquaSense/) repository.*
 
 An observing system using Vernier sensors to observe the quality of water in various locations, such as rivers, lakes, and reservoirs. The system will provide real-time data collection, analysis, and reporting capabilities to support environmental monitoring and decision-making processes.
 ## Feature
@@ -19,3 +19,5 @@ Run `setuart` built-in command:
 setuart -p 1 -t 485 -b 9600
 ```
 *Note: The serial port’s mode and associated communication parameters will go back to factory default after system reboot.*
+## Interface diagram
+![](static/interface.jpg)
